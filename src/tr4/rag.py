@@ -43,7 +43,12 @@ def _extract_person_names(text: str) -> set[str]:
 
 def _redact_names(reply: str, names: set[str]) -> str:
     for name in sorted(names, key=len, reverse=True):
-        reply = re.sub(re.escape(name), "um usuário do grupo", reply, flags=re.IGNORECASE)
+        # Word boundaries: an unbounded substring match would corrupt normal
+        # text whenever a name happens to be a substring of an unrelated word
+        # (e.g. "Ana" inside "banana", "análise").
+        reply = re.sub(
+            rf"\b{re.escape(name)}\b", "um usuário do grupo", reply, flags=re.IGNORECASE
+        )
     return reply
 
 
