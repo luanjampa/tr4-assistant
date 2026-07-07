@@ -73,6 +73,10 @@ Pra testar fazendo perguntas direto no terminal (mostra os termos, pede aceite, 
 make chat
 ```
 
+### Frontend web
+
+`GET /ui` — página HTML+JS estática em `frontend/`, servida pelo próprio FastAPI (mesma origem, sem CORS). Mostra os termos antes do primeiro uso, aceite fica em `localStorage` mas quem garante o consent de verdade é o backend (`accepted_terms: true` em toda request). `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header e o widget — deixam de ser segredo real assim que vão pro browser, rate limit + budget cap + Turnstile são os controles de abuso de verdade a partir daí. Local: `make api` e abrir `http://127.0.0.1:8000/ui/`. Em produção: `https://tr4-assistant.onrender.com/ui/`.
+
 ## Configuração
 
 Variáveis em `.env` (ver `.env.example`): Cloudflare (embeddings), Groq (chat), Postgres, API key, rate limit, teto de gasto mensal.
@@ -86,7 +90,7 @@ Variáveis em `.env` (ver `.env.example`): Cloudflare (embeddings), Groq (chat),
 - API key em `src/tr4/auth.py` (`TR4_API_KEY`) — obrigatório antes de expor publicamente
 - Termos/disclaimer em `src/tr4/legal.py` — gate de aceite (`accepted_terms`) antes de responder, e aviso de "confira sempre" em toda resposta (`disclaimer`). Isento de responsabilidade por dado errado/desatualizado coletado automaticamente.
 - Perguntas sem boa resposta ficam registradas em `tr4_gaps` (`src/tr4/gaps.py`) — `make gaps` mostra as mais repetidas, pra decidir o que pesquisar/ingerir a seguir.
-- Captcha (Cloudflare Turnstile) em `src/tr4/captcha.py` (`TURNSTILE_SECRET_KEY`) — barra bot automatizando pergunta e gerando custo. Só funciona quando um frontend renderizar o widget e mandar o `captcha_token`; sem essa variável, `/chat` aceita sem captcha (não tem frontend nesse repo ainda, API-only). Testado com as chaves de teste oficiais da Cloudflare (`1x0000...AA` sempre passa, `2x0000...AA` sempre falha).
+- Captcha (Cloudflare Turnstile) em `src/tr4/captcha.py` (`TURNSTILE_SECRET_KEY`) + `frontend/app.js` (`TURNSTILE_SITE_KEY`, via `GET /config`) — barra bot automatizando pergunta e gerando custo. Widget em modo `interaction-only` (só aparece se o visitante for considerado arriscado). Sem `TURNSTILE_SECRET_KEY`, `/chat` aceita sem captcha. Site criado em [dash.cloudflare.com/?to=/:account/turnstile](https://dash.cloudflare.com/?to=/:account/turnstile) (widget "tr4-assistant", hosts `tr4-assistant.onrender.com` + `localhost`); chaves reais em `.env` local e nas env vars do Render — nunca commitadas. Testado também com as chaves de teste oficiais da Cloudflare (`1x0000...AA` sempre passa, `2x0000...AA` sempre falha).
 - Teto de gasto real no Cloudflare (embeddings) via **AI Gateway** (`CLOUDFLARE_GATEWAY_ID`/`CLOUDFLARE_GATEWAY_TOKEN`) — diferente do budget do Groq (que é lógica no código), esse é um limite de verdade configurado no próprio dashboard Cloudflare (Spend Limits, beta), bloqueia a chamada ao bater o valor/mês. Gateway também tem rate limit (50 req/min) e cache de resposta (5min — seguro pra embeddings, mesma entrada sempre gera o mesmo vetor).
 
 ### Testar guardrails e prompt injection
@@ -112,6 +116,34 @@ Com Docker (dev local, sobe Postgres + API):
 ```bash
 docker compose up -d
 ```
+
+## Monitoramento de custo (checklist periódico)
+
+Tudo hoje roda nos free tiers ($0/mês esperado), mas nenhum é infinito — depois que o
+frontend for público, vale checar isso com alguma frequência (ex.: semanal no primeiro
+mês, depois mensal):
+
+- **Groq** ([console.groq.com](https://console.groq.com), aba Usage/Billing) — confirma
+  que segue no free tier e que o rate limit (6000 tokens/min por API key) não está sendo
+  estourado com frequência (`chat_groq.py` já faz retry em 429, mas retry constante é
+  sinal de tráfego maior que o esperado). `MAX_MONTHLY_SPEND_USD` (`budget.py`) é um teto
+  lógico no código — só protege se a tabela `tr4_usage` estiver de fato registrando uso;
+  vale conferir com `make gaps` / uma query direta de vez em quando.
+- **Cloudflare AI Gateway** ([dash.cloudflare.com](https://dash.cloudflare.com) > IA >
+  Gateway de AI > `tr4-assistant`) — o Spend Limit ($5/mês) é uma feature **beta**
+  configurada só no dashboard, não no código; vale olhar o gráfico de gasto real de vez
+  em quando pra confirmar que está cortando de verdade, não só configurado.
+- **Cloudflare Workers AI** (mesma conta, aba Workers AI > Uso) — free tier é por
+  "neurons/dia"; conferir se o volume de embeddings (1 chamada por pergunta do chat) não
+  está perto do limite diário.
+- **Render** (dashboard do serviço `tr4-assistant`) — free tier é 750h/mês; com 1 serviço
+  só e sleep automático após 15min idle, não deveria estourar, mas confirma no dashboard.
+- **Neon** (dashboard do projeto) — free tier é 100 compute-hours/mês + 0.5GB storage
+  (banco atual ~23MB); confirma que compute-hours não está subindo rápido demais com mais
+  gente usando.
+- **Cloudflare Turnstile** — sem custo (grátis, sem limite), só serve de filtro anti-bot;
+  não precisa monitorar gasto, só checar que o widget continua passando gente real
+  (poucos falsos positivos reclamados no grupo).
 
 ## Próximos passos sugeridos
 

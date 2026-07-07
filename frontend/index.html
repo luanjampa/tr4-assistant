@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TR4 Assistant — Pajero TR4</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>TR4 Assistant</h1>
+    <p class="subtitle">Peças, manutenção e instalação — Pajero TR4</p>
+  </header>
+
+  <main id="app">
+    <section id="chat-log" aria-live="polite"></section>
+
+    <form id="chat-form" class="composer">
+      <textarea
+        id="chat-input"
+        placeholder="Pergunte sobre peça, manutenção ou instalação do TR4..."
+        rows="1"
+        maxlength="8000"
+        required
+      ></textarea>
+      <button type="submit" id="send-btn">Enviar</button>
+    </form>
+    <div id="status-line" class="status-line"></div>
+  </main>
+
+  <div id="terms-overlay" class="overlay" hidden>
+    <div class="terms-box">
+      <h2>Antes de começar</h2>
+      <p id="terms-text">Carregando termos...</p>
+      <div id="turnstile-container"></div>
+      <button id="accept-btn" type="button">Entendi e aceito</button>
+    </div>
+  </div>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <script src="app.js"></script>
+</body>
+</html>

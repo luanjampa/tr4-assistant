@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # renderizar o widget (a site key é pública, fica no frontend); sem essa variável,
     # /chat não exige captcha.
     turnstile_secret_key: str | None = None
+    # Site key é pública por natureza (Cloudflare) — servida ao frontend via GET /config.
+    turnstile_site_key: str | None = None
 
     # Acima disso, distância (cosine) do melhor match é tratada como "sem boa resposta"
     # e a pergunta é registrada em tr4_gaps pra futura ingestão (ver gaps.py).

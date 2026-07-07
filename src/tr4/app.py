@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 
 from tr4 import __version__
 from tr4.auth import require_api_key
@@ -18,6 +21,10 @@ from tr4.rate_limit import enforce_rate_limit
 from tr4.store import ensure_schema_async
 
 app = FastAPI(title="TR4 Assistant API", version=__version__)
+
+# src/tr4/app.py -> parents[2] is the repo root both locally and in the Docker
+# image (WORKDIR /app, `COPY frontend ./frontend`).
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 
 class ChatRequest(BaseModel):
@@ -52,7 +59,8 @@ async def root() -> dict:
         "name": "TR4 Assistant API",
         "version": __version__,
         "docs": "/docs",
-        "endpoints": ["/health", "/terms", "/chat"],
+        "ui": "/ui",
+        "endpoints": ["/health", "/terms", "/config", "/chat"],
     }
 
 
@@ -64,6 +72,21 @@ async def health() -> dict:
 @app.get("/terms")
 async def terms() -> dict:
     return {"terms": TERMS_TEXT}
+
+
+@app.get("/config")
+async def frontend_config() -> dict:
+    """Public, non-secret config the static frontend needs at load time.
+
+    TR4_API_KEY here is a cost/abuse gate, not a real secret, once shipped to
+    every browser via a public frontend — rate limiting, the budget cap and
+    (once configured) Turnstile are the actual controls (see CLAUDE.md).
+    """
+    settings = get_settings()
+    return {
+        "api_key": settings.tr4_api_key or "",
+        "turnstile_site_key": settings.turnstile_site_key or "",
+    }
 
 
 @app.post(
@@ -86,6 +109,9 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
     return ChatResponse(reply=reply, context_previews=previews)
+
+
+app.mount("/ui", StaticFiles(directory=FRONTEND_DIR, html=True), name="ui")
 
 
 def create_app() -> FastAPI:
