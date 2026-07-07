@@ -22,9 +22,11 @@ from tr4.store import ensure_schema_async
 
 app = FastAPI(title="TR4 Assistant API", version=__version__)
 
-# src/tr4/app.py -> parents[2] is the repo root both locally and in the Docker
-# image (WORKDIR /app, `COPY frontend ./frontend`).
-FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
+# Not __file__-based: `pip install .` (Dockerfile) copies app.py into
+# site-packages, so its on-disk location has nothing to do with the repo root.
+# Both `make api`/Makefile and the Docker CMD run uvicorn from the repo root
+# (WORKDIR /app there, with `COPY frontend ./frontend`), so cwd is reliable.
+FRONTEND_DIR = Path.cwd() / "frontend"
 
 
 class ChatRequest(BaseModel):
