@@ -110,7 +110,6 @@
     if (termsAccepted()) return;
     overlay.hidden = false;
     await loadTerms();
-    renderTurnstileIfNeeded();
     await new Promise((resolve) => {
       acceptBtn.addEventListener(
         "click",
@@ -196,6 +195,7 @@
 
   (async () => {
     await loadConfig();
+    renderTurnstileIfNeeded();
     await showTermsGate();
     addMessage(
       "bot",

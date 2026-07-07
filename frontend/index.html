@@ -28,11 +28,15 @@
     <div id="status-line" class="status-line"></div>
   </main>
 
+  <!-- Outside the overlay on purpose: Turnstile needs to stay in normal
+       layout flow (not inside a display:none ancestor) since it's invoked
+       fresh before every /chat send, not just during the terms gate. -->
+  <div id="turnstile-container"></div>
+
   <div id="terms-overlay" class="overlay" hidden>
     <div class="terms-box">
       <h2>Antes de começar</h2>
       <p id="terms-text">Carregando termos...</p>
-      <div id="turnstile-container"></div>
       <button id="accept-btn" type="button">Entendi e aceito</button>
     </div>
   </div>
