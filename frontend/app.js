@@ -29,25 +29,13 @@
     return el;
   }
 
-  function addBotReply(reply, disclaimer, previews) {
+  function addBotReply(reply, disclaimer) {
     const el = document.createElement("div");
     el.className = "msg bot";
 
     const replyP = document.createElement("div");
     replyP.textContent = reply;
     el.appendChild(replyP);
-
-    if (previews && previews.length) {
-      const details = document.createElement("details");
-      details.className = "sources";
-      const summary = document.createElement("summary");
-      summary.textContent = `Fontes usadas (${previews.length})`;
-      const pre = document.createElement("pre");
-      pre.textContent = previews.join("\n\n---\n\n");
-      details.appendChild(summary);
-      details.appendChild(pre);
-      el.appendChild(details);
-    }
 
     if (disclaimer) {
       const disc = document.createElement("div");
@@ -183,7 +171,7 @@
 
     try {
       const data = await sendMessage(message);
-      addBotReply(data.reply, data.disclaimer, data.context_previews);
+      addBotReply(data.reply, data.disclaimer);
       setStatus("");
     } catch (err) {
       addMessage("error", err.message || "Erro inesperado. Tente de novo.");

@@ -43,7 +43,6 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
-    context_previews: list[str] = Field(default_factory=list)
     disclaimer: str = REPLY_DISCLAIMER
 
 
@@ -53,17 +52,6 @@ async def on_startup() -> None:
     await ensure_schema_async(settings.database_url, dim=settings.embedding_dim)
     await ensure_budget_schema(settings)
     await ensure_gaps_schema(settings)
-
-
-@app.get("/")
-async def root() -> dict:
-    return {
-        "name": "TR4 Assistant API",
-        "version": __version__,
-        "docs": "/docs",
-        "ui": "/ui",
-        "endpoints": ["/health", "/terms", "/config", "/chat"],
-    }
 
 
 @app.get("/health")
@@ -107,13 +95,18 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
             detail={"error": "terms_not_accepted", "terms": TERMS_TEXT},
         )
     try:
-        reply, previews = await answer_question(body.message)
+        # Second value is raw retrieved-chunk previews (can contain verbatim
+        # WhatsApp text incl. real names) — used for internal debugging only,
+        # never forwarded to API clients.
+        reply, _ = await answer_question(body.message)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
-    return ChatResponse(reply=reply, context_previews=previews)
+    return ChatResponse(reply=reply)
 
 
-app.mount("/ui", StaticFiles(directory=FRONTEND_DIR, html=True), name="ui")
+# Mounted at "/" (not "/ui") so the chat is what visitors land on — registered
+# last so it only catches what the explicit routes above didn't already match.
+app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 
 def create_app() -> FastAPI:

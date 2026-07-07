@@ -102,23 +102,6 @@ body {
   padding-top: 6px;
 }
 
-.sources {
-  margin-top: 8px;
-}
-
-.sources summary {
-  cursor: pointer;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.sources pre {
-  white-space: pre-wrap;
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin: 6px 0 0;
-}
-
 .composer {
   display: flex;
   gap: 8px;

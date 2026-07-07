@@ -19,29 +19,43 @@ reais ficam nos dashboards/`.env` — não duplicadas aqui.
 
 ## O que FALTA (nessa ordem, provavelmente)
 
-1. ~~Frontend de chat~~ — **construído** (`frontend/index.html`+`app.js`+`style.css`,
-   servido pelo próprio FastAPI em `GET /ui`, sem CORS por ser mesma origem). Mostra
-   `/terms` antes do primeiro uso (aceite fica em `localStorage`, mas `accepted_terms:true`
-   vai em toda request pro backend, que é quem realmente garante o consent gate). Novo
-   `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header
-   `X-API-Key` e o widget — ver nota de segurança no docstring de `/config` em `app.py`
-   (a api key deixa de ser segredo real assim que vai pro browser; rate limit + budget cap
-   + Turnstile (item 2) são os controles de verdade a partir daqui). Testado local via
-   curl (200 em `/ui`, `/ui/app.js`, `/ui/style.css`, `/config`; 403 sem `accepted_terms`;
-   `/chat` real respondeu com fonte) — **não testado em browser real** (sandbox do preview
-   tool bloqueou o venv nessa sessão), nem com pessoas do grupo ainda. Falta subir pro Render
-   (mesmo deploy da API, `Dockerfile` já copia `frontend/`) e testar em browser de verdade.
-2. Turnstile (captcha) — código e wiring prontos (`captcha.py`, `/config` já expõe
-   `turnstile_site_key`, `app.js` já sabe renderizar o widget invisível e mandar
-   `captcha_token`). Só falta criar o site no Cloudflare Turnstile e preencher
-   `TURNSTILE_SECRET_KEY` + `TURNSTILE_SITE_KEY` em produção (hoje ambos vazios, captcha
-   desligado).
-3. `tr4-sync` não está agendado — ingestão é manual até agora. Rodar de novo periodicamente
+1. ~~Frontend de chat~~ — **construído, no ar em produção, testado em browser real**
+   (`frontend/index.html`+`app.js`+`style.css`). Servido pelo FastAPI na **raiz do
+   domínio** (`GET /`, `StaticFiles` montado em `/` — registrado *depois* das rotas de
+   API pra não conflitar; ver `app.py`). Mostra `/terms` antes do primeiro uso (aceite
+   fica em `localStorage`, mas quem garante o consent de verdade é o backend via
+   `accepted_terms:true` em toda request). `GET /config` devolve `TR4_API_KEY`/
+   `TURNSTILE_SITE_KEY` pro JS montar o header `X-API-Key` e o widget.
+   3 bugs reais só apareceram testando em browser de verdade (não pegariam em code
+   review nem em teste local com curl):
+   - CSS `.overlay[hidden]` faltando — atributo `hidden` do HTML perdia pra `.overlay{display:flex}`
+     no cascade, termos nunca escondiam de verdade, cliques ficavam bloqueados por trás.
+   - `size: "invisible"` no Turnstile não é mais valor válido da API (só compact/flexible/normal) —
+     `render()` lançava exceção, widget nunca existia.
+   - Faltava `execution: "execute"` no Turnstile — sem isso o widget auto-executa no
+     render, e o `reset()+execute()` manual do app.js batia numa execução já rolando e
+     travava pra sempre (`getTurnstileToken()` nunca resolvia, `/chat` nunca era chamado).
+   Também corrigido um bug **só em produção** (Docker, `pip install .` não-editável):
+   `FRONTEND_DIR` calculado via `__file__` apontava pro site-packages, não pro repo —
+   trocado por `Path.cwd()` (Makefile e `CMD` do Dockerfile sempre rodam da raiz do repo).
+2. ~~Turnstile~~ — **configurado de verdade**. Site "tr4-assistant" criado no Cloudflare
+   Turnstile (hosts: `tr4-assistant.onrender.com` + `localhost`), `TURNSTILE_SITE_KEY`/
+   `TURNSTILE_SECRET_KEY` setados local e em produção (Render). `/chat` já exige
+   `captcha_token` válido.
+3. **PII fix**: `/chat` devolvia `context_previews` (trechos brutos recuperados da base,
+   até 280 char, sem redigir) — pra chunks `whatsapp_window` isso incluía nome real de
+   gente do grupo, visível a qualquer visitante da web (não só no frontend — no corpo da
+   resposta da API). Removido do contrato público (`ChatResponse` não tem mais esse campo;
+   `rag.py`/`answer_question` segue retornando as previews internamente pra quem quiser
+   usar por script, mas `app.py` não repassa mais pro cliente). Frontend não mostra mais
+   "Fontes usadas".
+4. `tr4-sync` não está agendado — ingestão é manual até agora. Rodar de novo periodicamente
    (cron local, GitHub Actions, ou Render Cron Job) pra manter a base atualizada.
-4. Grupo Facebook: só o caminho manual (`--facebook-manual`) existe. Sem app Meta aprovado,
+5. Grupo Facebook: só o caminho manual (`--facebook-manual`) existe. Sem app Meta aprovado,
    sem Graph API.
-5. Ninguém real testou o `/chat` em uso — só eu, via curl. Vale validar com gente do grupo
-   depois que o frontend existir.
+6. Testado por mim (curl + browser real, local e produção). Ninguém do grupo usou ainda —
+   vale validar com gente de verdade agora que o link (`https://tr4-assistant.onrender.com`)
+   já é diretamente o chat.
 
 ## Decisões/achados importantes que não são óbvios lendo só o código
 

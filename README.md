@@ -75,7 +75,7 @@ make chat
 
 ### Frontend web
 
-`GET /ui` — página HTML+JS estática em `frontend/`, servida pelo próprio FastAPI (mesma origem, sem CORS). Mostra os termos antes do primeiro uso, aceite fica em `localStorage` mas quem garante o consent de verdade é o backend (`accepted_terms: true` em toda request). `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header e o widget — deixam de ser segredo real assim que vão pro browser, rate limit + budget cap + Turnstile são os controles de abuso de verdade a partir daí. Local: `make api` e abrir `http://127.0.0.1:8000/ui/`. Em produção: `https://tr4-assistant.onrender.com/ui/`.
+A raiz do domínio (`GET /`) é o próprio chat — página HTML+JS estática em `frontend/`, servida pelo FastAPI via `StaticFiles` montado em `/` (mesma origem, sem CORS; rotas de API como `/health`/`/terms`/`/config`/`/chat` são registradas antes do mount e continuam funcionando normalmente). Mostra os termos antes do primeiro uso, aceite fica em `localStorage` mas quem garante o consent de verdade é o backend (`accepted_terms: true` em toda request). `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header e o widget — deixam de ser segredo real assim que vão pro browser, rate limit + budget cap + Turnstile são os controles de abuso de verdade a partir daí. A resposta de `/chat` não traz os trechos brutos recuperados da base (`context_previews` foi removido do contrato público) — WhatsApp indexado tem nome real de gente do grupo, não faz sentido expor isso a qualquer visitante da web. Local: `make api` e abrir `http://127.0.0.1:8000/`. Em produção: `https://tr4-assistant.onrender.com/`.
 
 ## Configuração
 

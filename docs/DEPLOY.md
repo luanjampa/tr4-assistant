@@ -68,8 +68,9 @@ Repetir a ingestão periodicamente (cron local, GitHub Actions, ou um Render Cro
 - [x] `RATE_LIMIT_PER_MINUTE` ajustado — limitador em memória, só protege 1 instância; Render free tier só roda 1 réplica mesmo, então tá OK por ora.
 - [x] HTTPS (Render já fornece TLS no domínio `.onrender.com`).
 - [x] Neon não exposto senão pela connection string (Render acessa via internet cifrada, `sslmode=require`).
-- [x] Frontend em `frontend/` (servido pelo próprio backend em `GET /ui`) busca `GET /terms` antes do primeiro uso e só chama `/chat` com `accepted_terms: true` — sem isso a API recusa com 403 (ver `src/tr4/legal.py`). Precisa dar `git push`/deploy pra ir pro ar em produção.
-- [ ] Turnstile de verdade: `app.js` e `GET /config` já sabem lidar com isso, só falta criar o site no Cloudflare Turnstile e definir `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` em produção — sem isso, `/chat` aceita sem captcha.
+- [x] Frontend em `frontend/` (servido pelo próprio backend na raiz do domínio, `GET /`) busca `GET /terms` antes do primeiro uso e só chama `/chat` com `accepted_terms: true` — sem isso a API recusa com 403 (ver `src/tr4/legal.py`). No ar em produção.
+- [x] Turnstile de verdade configurado (site + secret key criados no Cloudflare, `TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` setados em produção) — `/chat` já exige captcha_token real.
+- [x] `/chat` não devolve os trechos brutos recuperados da base (`context_previews` removido do contrato público) — WhatsApp indexado tem nome real de gente do grupo, não dava pra expor isso a qualquer visitante.
 
 ## 6. Observabilidade
 
