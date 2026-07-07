@@ -6,10 +6,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # Embeddings (Ollama local — CPU é suficiente)
-    ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_embed_model: str = "nomic-embed-text"
-    embedding_dim: int = 768
+    # Embeddings — Cloudflare Workers AI (bge-m3: multilíngue, 1024 dim, sem servidor pra manter)
+    cloudflare_account_id: str | None = None
+    cloudflare_api_token: str | None = None
+    cloudflare_embed_model: str = "@cf/baai/bge-m3"
+    embedding_dim: int = 1024
+    embed_batch_size: int = 20
+    # AI Gateway (opcional) — dá limite de gasto real ($/mês) e rate limit no
+    # Cloudflare em si, além do que já existe no app. Sem isso, chama Workers AI direto.
+    cloudflare_gateway_id: str | None = None
+    cloudflare_gateway_token: str | None = None
 
     # Chat (Groq — API compatível OpenAI, sem GPU)
     groq_api_key: str | None = None

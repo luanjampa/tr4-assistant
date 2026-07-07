@@ -31,6 +31,12 @@ _pool: AsyncConnectionPool | None = None
 
 def get_sync_conn(database_url: str) -> psycopg.Connection:
     conn = psycopg.connect(database_url, autocommit=True)
+    # Some managed Postgres poolers (confirmed on Neon's pooled/PgBouncer
+    # endpoint) hand out connections with an empty search_path instead of the
+    # usual "$user",public default — unqualified table names then fail with
+    # "relation does not exist" even though the tables exist in public. Force
+    # it explicitly rather than relying on the server default.
+    conn.execute("SET search_path TO public")
     conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
     register_vector(conn)
     return conn
@@ -64,6 +70,19 @@ def count_rows_sync(conn: psycopg.Connection) -> int:
     return conn.execute(f"SELECT count(*) FROM {TABLE}").fetchone()[0]
 
 
+async def _configure_connection(conn: psycopg.AsyncConnection) -> None:
+    # See the comment in get_sync_conn: some pooled Postgres endpoints (Neon's
+    # PgBouncer-backed pooler, confirmed) don't guarantee "public" is on the
+    # search_path for every connection handed out of the pool, even though the
+    # role's default normally includes it — force it per-connection instead.
+    # autocommit first: pool connections default to transactions-on, and a
+    # bare SET without a commit leaves the connection INTRANS, which the pool
+    # rejects as unhealthy right after configure() runs.
+    await conn.set_autocommit(True)
+    await conn.execute("SET search_path TO public")
+    await register_vector_async(conn)
+
+
 async def get_pool(database_url: str) -> AsyncConnectionPool:
     global _pool
     if _pool is None:
@@ -72,7 +91,7 @@ async def get_pool(database_url: str) -> AsyncConnectionPool:
         # connection, which fails if `CREATE EXTENSION vector` hasn't run yet.
         async with await psycopg.AsyncConnection.connect(database_url, autocommit=True) as boot_conn:
             await boot_conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        pool = AsyncConnectionPool(database_url, open=False, configure=register_vector_async)
+        pool = AsyncConnectionPool(database_url, open=False, configure=_configure_connection)
         # wait=True: fail fast with a clear PoolTimeout if the DB isn't reachable,
         # instead of returning before any connection is ready (first query would
         # then hang waiting on a connection that may never come).

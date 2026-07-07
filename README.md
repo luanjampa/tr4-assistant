@@ -1,13 +1,16 @@
 # TR4 Assistant
 
-Assistente com **RAG** sobre WhatsApp/Facebook, manuais (PDF) e pesquisa web, respostas via **Groq** (Llama). Embeddings rodam localmente no **Ollama** (CPU). Base vetorial em **Postgres + pgvector**. As mensagens dos utilizadores **não** são gravadas na base de conhecimento.
+Assistente com **RAG** sobre WhatsApp/Facebook, manuais (PDF) e pesquisa web, respostas via **Groq** (Llama). Embeddings via **Cloudflare Workers AI** (bge-m3) — sem servidor pra manter. Base vetorial em **Postgres + pgvector**. As mensagens dos utilizadores **não** são gravadas na base de conhecimento.
 
 ## Requisitos
 
 - Python 3.11+
-- [Ollama](https://ollama.com) local só para embeddings: `ollama pull nomic-embed-text`
 - Conta [Groq](https://console.groq.com) (API key) para o chat
+- Conta [Cloudflare](https://dash.cloudflare.com) (Workers AI) para embeddings — `IA > Workers AI > Crie um token de API Workers AI`, mais o Account ID da conta
+- (Recomendado) Um AI Gateway na mesma conta Cloudflare com Spend Limit configurado — `IA > Gateway de AI > Criar um gateway personalizado`, liga "Spend Limits" (valor/mês, ex. $5) e "Gateway autenticado" (gera um token à parte). Sem isso, `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` sozinhos chamam Workers AI direto, sem nenhum teto de gasto nesse provider.
 - Postgres com extensão `pgvector` (`docker compose up -d postgres` sobe um local)
+
+Pra produção (ver seção Deploy online): conta [Render](https://render.com) (hospeda a API) e conta [Neon](https://neon.com) (Postgres+pgvector) — ambas grátis, sem cartão.
 
 ## Setup
 
@@ -72,7 +75,7 @@ make chat
 
 ## Configuração
 
-Variáveis em `.env` (ver `.env.example`): Ollama (embeddings), Groq (chat), Postgres, API key, rate limit, teto de gasto mensal.
+Variáveis em `.env` (ver `.env.example`): Cloudflare (embeddings), Groq (chat), Postgres, API key, rate limit, teto de gasto mensal.
 
 ## Guardrails
 
@@ -84,6 +87,7 @@ Variáveis em `.env` (ver `.env.example`): Ollama (embeddings), Groq (chat), Pos
 - Termos/disclaimer em `src/tr4/legal.py` — gate de aceite (`accepted_terms`) antes de responder, e aviso de "confira sempre" em toda resposta (`disclaimer`). Isento de responsabilidade por dado errado/desatualizado coletado automaticamente.
 - Perguntas sem boa resposta ficam registradas em `tr4_gaps` (`src/tr4/gaps.py`) — `make gaps` mostra as mais repetidas, pra decidir o que pesquisar/ingerir a seguir.
 - Captcha (Cloudflare Turnstile) em `src/tr4/captcha.py` (`TURNSTILE_SECRET_KEY`) — barra bot automatizando pergunta e gerando custo. Só funciona quando um frontend renderizar o widget e mandar o `captcha_token`; sem essa variável, `/chat` aceita sem captcha (não tem frontend nesse repo ainda, API-only). Testado com as chaves de teste oficiais da Cloudflare (`1x0000...AA` sempre passa, `2x0000...AA` sempre falha).
+- Teto de gasto real no Cloudflare (embeddings) via **AI Gateway** (`CLOUDFLARE_GATEWAY_ID`/`CLOUDFLARE_GATEWAY_TOKEN`) — diferente do budget do Groq (que é lógica no código), esse é um limite de verdade configurado no próprio dashboard Cloudflare (Spend Limits, beta), bloqueia a chamada ao bater o valor/mês. Gateway também tem rate limit (50 req/min) e cache de resposta (5min — seguro pra embeddings, mesma entrada sempre gera o mesmo vetor).
 
 ### Testar guardrails e prompt injection
 
@@ -93,9 +97,15 @@ make injection-test   # precisa de GROQ_API_KEY real — testa bypass de verdade
 
 `scripts/injection_tests.py` cobre: burlar o escopo via menção a "tr4", override de instrução, base64/leetspeak, extração de system prompt/API key, role-play (DAN), e — o mais específico dessa arquitetura — injeção de instrução dentro do CONTEXT (simula uma página raspada ou post do grupo malicioso tentando sequestrar o bot). Resultado é lido manualmente (`FALHOU` = gap confirmado, `REVISAR` = ambíguo).
 
-## Deploy online (Railway)
+## Deploy online
 
-Plano de hospedagem (3 serviços Railway: api, Postgres+pgvector, Ollama-só-embeddings): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+Indo para Render (API) + Neon (Postgres+pgvector) + Cloudflare (embeddings/captcha) em vez de Railway, pra não misturar billing/limite com outros projetos na mesma conta. Custo esperado: **$0/mês**, dentro do free tier de cada um:
+
+- **Render** ([render.com](https://render.com), signup: [dashboard.render.com/register](https://dashboard.render.com/register)) — free tier: 750h/mês (dá pra manter 1 serviço sempre ligado), 512MB RAM, dorme após 15min sem uso (~30-50s pra acordar na próxima pergunta). Sem cartão. Cria um **Web Service** apontando pro repo (detecta o `Dockerfile` sozinho).
+- **Neon** ([neon.com](https://neon.com), signup: [console.neon.tech/signup](https://console.neon.tech/signup)) — free tier: 100 compute-hours/mês, 0.5GB de storage (nosso banco tem ~23MB, sobra bastante), sem expiração por calendário (diferente do Postgres grátis do Render, que expira em 90 dias), "acorda" em <500ms. Sem cartão. Cria um projeto, copia a `DATABASE_URL` (já vem com `pgvector` disponível — só rodar `CREATE EXTENSION vector` uma vez, o app faz isso sozinho no startup).
+- **Cloudflare** ([dash.cloudflare.com](https://dash.cloudflare.com)) — Workers AI + AI Gateway já configurados (ver seção Guardrails), Spend Limit de $5/mês real.
+
+**[docs/DEPLOY.md](docs/DEPLOY.md)** ainda descreve o plano antigo (Railway) — será reescrito quando as contas Render/Neon estiverem criadas e conectadas.
 
 Com Docker (dev local, sobe Postgres + API):
 

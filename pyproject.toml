@@ -1,7 +1,7 @@
 [project]
 name = "tr4-assistant"
 version = "0.1.0"
-description = "Assistente TR4 com RAG (Llama via Ollama), ingestão batch e guardrails."
+description = "Assistente TR4 com RAG (Llama via Groq, embeddings via Cloudflare Workers AI), ingestão batch e guardrails."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

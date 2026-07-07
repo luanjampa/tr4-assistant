@@ -2,9 +2,9 @@
 """
 Interactive local retrieval test — no Groq, no API server, no cost.
 
-Embeds the question (local Ollama) and shows what pgvector would hand to the
-LLM as CONTEXT, so you can check retrieval quality with the data already
-indexed without needing a GROQ_API_KEY.
+Embeds the question (Cloudflare Workers AI) and shows what pgvector would hand
+to the LLM as CONTEXT, so you can check retrieval quality with the data
+already indexed without needing a GROQ_API_KEY.
 """
 
 from __future__ import annotations
