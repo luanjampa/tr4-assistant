@@ -1,0 +1,30 @@
+[project]
+name = "tr4-assistant"
+version = "0.1.0"
+description = "Assistente TR4 com RAG (Llama via Ollama), ingestão batch e guardrails."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "httpx>=0.27.0",
+  "pydantic-settings>=2.6.0",
+  "python-multipart>=0.0.12",
+  "psycopg[binary,pool]>=3.2.0",
+  "pgvector>=0.3.6",
+  "pypdf>=5.0.0",
+  "trafilatura>=1.12.0",
+]
+
+[project.scripts]
+tr4-sync = "tr4.jobs.sync:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tr4 = ["prompts/*.txt"]

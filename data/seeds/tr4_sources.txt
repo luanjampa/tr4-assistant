@@ -1,0 +1,72 @@
+# Seed URLs para o job de pesquisa web (tr4-sync --web-seeds).
+# O conteúdo real da página é buscado e indexado — preço/código de peça
+# mudam com o tempo, tratar como referência e sempre confirmar por
+# chassi/VIN e no ponto de venda antes de comprar.
+
+https://www.reparadormit.com.br/
+https://mitdocs.com.br/catalogo/pajero-tr4
+https://mitdocs.com.br/catalogo/pajero-tr4/motor
+https://mitdocs.com.br/catalogo/pajero-tr4/lubrificacao
+https://mitdocs.com.br/catalogo/pajero-tr4/refrigeracao
+https://mitdocs.com.br/catalogo/pajero-tr4/refrigeracao/bomba-de-agua
+https://mitdocs.com.br/catalogo/pajero-tr4/refrigeracao/mangueira-de-agua-e-termostato
+https://mitdocs.com.br/catalogo/pajero-tr4/transferencia
+https://mitdocs.com.br/catalogo/pajero-tr4/suspensao-traseira
+https://mitdocs.com.br/catalogo/pajero-tr4/suspensao-dianteira
+https://quatrorodas.abril.com.br/carros-usados/guia-de-usados-mitsubishi-pajero-tr4/
+https://carmanuals2.com/mitsubishi/pajero-tr4-2012-manual-do-proprietario-104486
+https://www.manualpdf.com.br/mitsubishi/pajero-tr4-2013/manual
+https://www.facebook.com/groups/174185112777000
+https://www.4x4brasil.com.br/forum/mitsubishi/
+
+# --- Rodas e pneus (pesquisado por agente, URLs confirmadas por fetch real) ---
+https://jantes-e-pneus.com/size/mitsubishi/pajero-tr4/
+https://jantes-e-pneus.com/size/mitsubishi/pajero-tr4/2009/
+https://www.pneus.org/pneu-mitsubishi-pajero-tr4-2013
+https://www.gama4x4.com.br/mitsubishi/mitsubishi-pajero-tr4-io/pneu-mitsubishi-tr4-io.html
+https://www.4x4brasil.com.br/forum/mitsubishi/16183-solucao-pneus-pajero-tr4-142.html
+https://www.4x4brasil.com.br/forum/mitsubishi/16183-solucao-pneus-pajero-tr4-127.html
+https://www.4x4brasil.com.br/forum/mitsubishi/16183-solucao-pneus-pajero-tr4-136.html
+https://www.bastosrodas.com.br/rodas-avulsas/aro-16/mitsubishi/roda-orig-mitsubishi-pajero-tr4-2006-aro-16x7-5x114-3-et43-pp-reform-avulsa
+https://www.pneusmalibu.com.br/rodas-avulsas/aro-16/mitsubishi/roda-avulsa-aro-16-original-mitsubishi-pajero-tr4-furacao-5x114-3-mm-codigo-da-peca-ca310010-701000142
+https://www.tadsson.com.br/espacadores-de-roda/mitsubishi/tr4/espacador-alargador-de-rodas-para-mitsubishi-pajero-tr4-em-aluminio
+https://www.dandaro4x4.com.br/kit-4-alargador-espacador-de-roda-para-pajero-tr4-32mm-5x114-3-468
+https://www.kdpneus.com.br/pneu-bfgoodrich-aro-16---225-70r16---all-terrain-t-a-ko2---102-99r172490105/p
+https://www.pirelli.com/tyres/pt-br/carro/catalogo-pneus/por-modelo-carro/mitsubishi/pajero-tr4
+
+# --- Suspensão e lift kit (pesquisado por agente, URLs confirmadas por fetch real) ---
+https://www.4x4brasil.com.br/forum/mitsubishi/146317-duvida-pajerinho-tr4-como-montar-para-trilhar-mais-pesadas.html
+https://www.4x4brasil.com.br/forum/mitsubishi/35498-body-lift-calco-na-pajero-tr4-51.html
+https://www.gama4x4.com.br/kit-de-suspens-o-3-polegadas-para-pajero-tr4-todos-anos.html
+https://www.gama4x4.com.br/kit-lift-de-suspens-o-para-mitsubishi-pajero-tr4-de-2-pol.html
+https://offlimits.com.br/produto/kit-lift-tr4-offshox/
+https://brdm.com.br/modificacao-automotiva/suspensao-esportiva-legalizacao-modificacao-automotiva/
+# Resolução CONTRAN 292/2008 (legal: exige CSV + averbação p/ alterar suspensão) — PDF, ingest tenta extrair via pypdf
+https://www.gov.br/transportes/pt-br/assuntos/transito/conteudo-contran/resolucoes/cons292.pdf
+
+# --- Mods 4x4 gerais: guincho, para-choque, snorkel, skid plate, chip (pesquisado por agente) ---
+https://www.buffalo4x4.com.br/base-para-guincho-eletrico-embutido-pajero-tr4
+https://www.pennaoffroad.com.br/mitsubishi/tr4
+https://www.eaiferias.com/2015/12/modificacoes-tr4-deadpool.html
+https://www.4x4brasil.com.br/forum/mitsubishi/73147-tr4-protetores-cambio-e-tanque-2.html
+https://www.4x4brasil.com.br/forum/mitsubishi/65259-tr4-chipada-3.html
+
+# --- Vitrine Mercado Livre com peças/acessórios TR4 (indicada pelo usuário) ---
+# Página mista (produtos não-TR4 também aparecem) — RAG filtra por relevância na busca.
+https://www.mercadolivre.com.br/social/s10overland_054store/lists/c6d7efae-83df-415a-8313-9c9c18eb604d
+
+# --- Coletor 4x2x1 vs 4x1, tração/duna, legal escape (pesquisado direto, URLs confirmadas por fetch real) ---
+https://preparados.com.br/topic/4137/4x2x1-vs-4x1-diferen%C3%A7as
+https://g8motorsport.com.br/coletor-de-escape/
+https://www.giba.com.br/single-post/coletor-dimensionado-4x1-4x2-4x2x1-escape-full
+http://topcarmit.blogspot.com/2011/11/como-usar-corretamente-as-tracoes-da.html
+https://www.4x4brasil.com.br/forum/mitsubishi/58302-bloqueio-de-diferencial-da-pajero-4-print.html
+https://www.4x4brasil.com.br/forum/mitsubishi/44182-tracao-pajero-tr4-flex.html
+# CONAMA 252/1999 (legal: limite de ruído 99dB/7m p/ escapamento alterado) + CTB Art.104 (retenção se reprovar inspeção)
+https://www.despachantedok.com.br/blog/multas-de-transito/escapamento-esportivo/
+
+# Fontes citadas por agentes mas NÃO confirmadas por fetch direto (SSL expirado, DNS falhou,
+# ou só vistas via snippet de busca) — não incluídas acima de propósito:
+# 4wdbrasil.com.br (SSL expirado), caminhotracado.com.br (DNS falhou),
+# justparts.com.br, gama4x4.com.br (produtos extras), tork4x4.com.br, taura4x4.com,
+# redej2.com.br, powerchipbrasil.com.br — revisar manualmente antes de adicionar.
