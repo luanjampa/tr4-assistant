@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from tr4.budget import BUDGET_EXCEEDED_REPLY, check_budget_ok, record_usage
@@ -11,6 +12,39 @@ from tr4.embeddings import embed_texts
 from tr4.gaps import is_gap, record_gap
 from tr4.guardrails import OFF_TOPIC_REPLY, looks_in_scope
 from tr4.store import count_rows_async, query_similar_async
+
+# whatsapp_window/facebook_post chunks are lines of "[timestamp] Sender: text"
+# (see ingest/whatsapp.py, ingest/facebook_batch.py) — real first/last names of
+# group members. The system prompt asks the model not to repeat them, but an
+# 8B model won't reliably hold that under every phrasing, so this is a
+# backend-enforced safety net: pull every sender name out of the chunks that
+# were actually retrieved for this question, and scrub them from the reply
+# text regardless of what the model did.
+_SENDER_LINE_RE = re.compile(r"^\[[^\]]*\]\s*([^:\n]+):", re.MULTILINE)
+# WhatsApp prefixes senders not in the address book with "~ " (or a plain
+# "- "), and export apps sometimes tack on an emoji from the contact's
+# display name — strip both so the extracted name actually matches how the
+# model writes it in prose ("~ Well Soares🏍" in the chunk vs "Well Soares"
+# in the reply).
+_NAME_PREFIX_RE = re.compile(r"^[~\-–\s]+")
+_TRAILING_EMOJI_RE = re.compile(
+    "[" "\U0001f300-\U0001faff" "\U0001f000-\U0001f0ff" "☀-➿" "︀-️" r"\s" "]+$"
+)
+
+
+def _extract_person_names(text: str) -> set[str]:
+    names = set()
+    for m in _SENDER_LINE_RE.finditer(text):
+        name = _TRAILING_EMOJI_RE.sub("", _NAME_PREFIX_RE.sub("", m.group(1).strip())).strip()
+        if len(name) >= 2:
+            names.add(name)
+    return names
+
+
+def _redact_names(reply: str, names: set[str]) -> str:
+    for name in sorted(names, key=len, reverse=True):
+        reply = re.sub(re.escape(name), "um usuário do grupo", reply, flags=re.IGNORECASE)
+    return reply
 
 
 def _load_system_template() -> str:
@@ -51,6 +85,7 @@ async def answer_question(
 
     context_parts: list[str] = []
     previews: list[str] = []
+    person_names: set[str] = set()
     for r in results:
         doc = r["text"]
         meta = r["metadata"] or {}
@@ -59,6 +94,7 @@ async def answer_question(
         label = f"[{kind} | {src}]" if src else f"[{kind}]"
         context_parts.append(f"{label}\n{doc}")
         previews.append(doc[:280] + ("…" if len(doc) > 280 else ""))
+        person_names |= _extract_person_names(doc)
 
     context = "\n\n---\n\n".join(context_parts) if context_parts else "(sem contexto recuperado)"
     system_template = _load_system_template()
@@ -70,6 +106,8 @@ async def answer_question(
     ]
     reply, usage = await chat_complete(messages, settings)
     await record_usage(usage["prompt_tokens"], usage["completion_tokens"], settings)
+    if person_names:
+        reply = _redact_names(reply, person_names)
 
     best_distance = results[0]["distance"] if results else None
     if is_gap(reply, best_distance, settings):
