@@ -91,6 +91,7 @@
       turnstileWidgetId = turnstile.render(turnstileContainer, {
         sitekey: config.turnstile_site_key,
         appearance: "interaction-only",
+        execution: "execute",
         callback: (token) => {
           if (pendingTurnstileResolve) {
             pendingTurnstileResolve(token);
