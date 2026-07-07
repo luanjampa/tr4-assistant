@@ -46,6 +46,16 @@ async def on_startup() -> None:
     await ensure_gaps_schema(settings)
 
 
+@app.get("/")
+async def root() -> dict:
+    return {
+        "name": "TR4 Assistant API",
+        "version": __version__,
+        "docs": "/docs",
+        "endpoints": ["/health", "/terms", "/chat"],
+    }
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "version": __version__}
