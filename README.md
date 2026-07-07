@@ -99,13 +99,13 @@ make injection-test   # precisa de GROQ_API_KEY real — testa bypass de verdade
 
 ## Deploy online
 
-Indo para Render (API) + Neon (Postgres+pgvector) + Cloudflare (embeddings/captcha) em vez de Railway, pra não misturar billing/limite com outros projetos na mesma conta. Custo esperado: **$0/mês**, dentro do free tier de cada um:
+**No ar**: Render (API) + Neon (Postgres+pgvector) + Cloudflare (embeddings/captcha) em vez de Railway, pra não misturar billing/limite com outros projetos na mesma conta. Custo real: **$0/mês**, dentro do free tier de cada um.
 
-- **Render** ([render.com](https://render.com), signup: [dashboard.render.com/register](https://dashboard.render.com/register)) — free tier: 750h/mês (dá pra manter 1 serviço sempre ligado), 512MB RAM, dorme após 15min sem uso (~30-50s pra acordar na próxima pergunta). Sem cartão. Cria um **Web Service** apontando pro repo (detecta o `Dockerfile` sozinho).
-- **Neon** ([neon.com](https://neon.com), signup: [console.neon.tech/signup](https://console.neon.tech/signup)) — free tier: 100 compute-hours/mês, 0.5GB de storage (nosso banco tem ~23MB, sobra bastante), sem expiração por calendário (diferente do Postgres grátis do Render, que expira em 90 dias), "acorda" em <500ms. Sem cartão. Cria um projeto, copia a `DATABASE_URL` (já vem com `pgvector` disponível — só rodar `CREATE EXTENSION vector` uma vez, o app faz isso sozinho no startup).
-- **Cloudflare** ([dash.cloudflare.com](https://dash.cloudflare.com)) — Workers AI + AI Gateway já configurados (ver seção Guardrails), Spend Limit de $5/mês real.
+- **Render** ([render.com](https://render.com), signup: [dashboard.render.com/register](https://dashboard.render.com/register)) — free tier: 750h/mês, 512MB RAM, dorme após 15min sem uso (~30-50s pra acordar na próxima pergunta). Sem cartão.
+- **Neon** ([neon.com](https://neon.com), signup: [console.neon.tech/signup](https://console.neon.tech/signup)) — free tier: 100 compute-hours/mês, 0.5GB de storage (nosso banco tem ~23MB, sobra bastante), sem expiração por calendário, "acorda" em <500ms. Sem cartão.
+- **Cloudflare** — Workers AI + AI Gateway com Spend Limit real configurado (ver seção Guardrails).
 
-**[docs/DEPLOY.md](docs/DEPLOY.md)** ainda descreve o plano antigo (Railway) — será reescrito quando as contas Render/Neon estiverem criadas e conectadas.
+Passo a passo completo, incluindo um gotcha real de produção (search_path do pooler do Neon) já corrigido no código: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 Com Docker (dev local, sobe Postgres + API):
 
