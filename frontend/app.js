@@ -8,6 +8,7 @@
   const termsText = document.getElementById("terms-text");
   const acceptBtn = document.getElementById("accept-btn");
   const turnstileContainer = document.getElementById("turnstile-container");
+  const kbStatus = document.getElementById("kb-status");
 
   const TERMS_KEY = "tr4_terms_accepted";
 
@@ -55,6 +56,23 @@
     } catch (e) {
       config = { api_key: "", turnstile_site_key: "" };
     }
+    renderKbStatus();
+  }
+
+  function renderKbStatus() {
+    if (!kbStatus) return;
+    const parts = [];
+    if (config.kb_updated_at) {
+      const d = new Date(config.kb_updated_at);
+      parts.push(`Base atualizada em ${d.toLocaleDateString("pt-BR")}`);
+    }
+    if (config.kb_chunks) {
+      parts.push(`${config.kb_chunks.toLocaleString("pt-BR")} trechos indexados`);
+    }
+    if (config.version) {
+      parts.push(`v${config.version}`);
+    }
+    kbStatus.textContent = parts.join(" · ");
   }
 
   async function loadTerms() {

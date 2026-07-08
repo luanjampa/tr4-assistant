@@ -18,7 +18,7 @@ from tr4.gaps import ensure_schema as ensure_gaps_schema
 from tr4.legal import REPLY_DISCLAIMER, TERMS_TEXT
 from tr4.rag import answer_question
 from tr4.rate_limit import enforce_rate_limit
-from tr4.store import ensure_schema_async
+from tr4.store import ensure_schema_async, kb_stats_async
 
 app = FastAPI(title="TR4 Assistant API", version=__version__)
 
@@ -73,9 +73,13 @@ async def frontend_config() -> dict:
     (once configured) Turnstile are the actual controls (see CLAUDE.md).
     """
     settings = get_settings()
+    stats = await kb_stats_async(settings.database_url)
     return {
         "api_key": settings.tr4_api_key or "",
         "turnstile_site_key": settings.turnstile_site_key or "",
+        "version": __version__,
+        "kb_chunks": stats["chunks"],
+        "kb_updated_at": stats["updated_at"],
     }
 
 

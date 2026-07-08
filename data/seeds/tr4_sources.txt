@@ -70,3 +70,10 @@ https://www.despachantedok.com.br/blog/multas-de-transito/escapamento-esportivo/
 # 4wdbrasil.com.br (SSL expirado), caminhotracado.com.br (DNS falhou),
 # justparts.com.br, gama4x4.com.br (produtos extras), tork4x4.com.br, taura4x4.com,
 # redej2.com.br, powerchipbrasil.com.br — revisar manualmente antes de adicionar.
+
+# --- Site do clube TR4 Curitiba (indicado pelo usuário) ---
+# Wix de página única, JS pesado — trafilatura pode não extrair muito do menu
+# (Manuais/Agenda/Fotos), boa parte do conteúdo real provavelmente já está
+# coberto pelos manuais oficiais em data/manuals/ e pelos outros seeds acima;
+# deixa indexar o que der, RAG filtra por relevância na busca.
+https://tr4cwb.wixsite.com/tr4cwb

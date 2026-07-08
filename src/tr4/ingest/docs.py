@@ -11,7 +11,10 @@ def _pdf_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
     docs: list[dict] = []
     reader = PdfReader(str(path))
     for page_num, page in enumerate(reader.pages, start=1):
-        text = (page.extract_text() or "").strip()
+        # pypdf occasionally emits NUL bytes from garbled font/encoding data in
+        # a page's content stream — Postgres text columns reject them outright
+        # (psycopg.DataError), so strip before this ever reaches store.py.
+        text = (page.extract_text() or "").replace("\x00", "").strip()
         if not text:
             continue
         docs.append(
@@ -30,7 +33,7 @@ def _pdf_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
 
 
 def _text_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
-    text = path.read_text(encoding="utf-8", errors="replace").strip()
+    text = path.read_text(encoding="utf-8", errors="replace").replace("\x00", "").strip()
     if not text:
         return []
     return [
@@ -43,16 +46,20 @@ def _text_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
 
 
 def load_docs_folder(folder: Path, *, kind: str = "manual_doc", id_prefix: str = "doc") -> list[dict]:
-    """Reads every .pdf/.txt/.md file in `folder` (non-recursive) into documents.
+    """Reads every .pdf/.txt/.md file in `folder`, recursively, into documents.
 
     `kind` is a trust-tier tag read by prompts/system.txt (e.g. "manual_doc" for an
     official owner's manual vs "owner_note" for a personal report from the vehicle's
     owner — real but not manufacturer-official, so it must not be labeled the same way.
+    Recursive so a folder organized into subfolders (e.g. one per vehicle system —
+    motor/, freio/, eletrica/...) is picked up in one `--docs` pass; subfolder names
+    aren't tracked in metadata, just the filename, so filenames must stay unique across
+    subfolders (true today — chapter-numbered workshop manual pages).
     """
     docs: list[dict] = []
     if not folder.exists():
         return docs
-    for path in sorted(folder.iterdir()):
+    for path in sorted(folder.rglob("*")):
         if not path.is_file():
             continue
         suffix = path.suffix.lower()

@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 import httpx
 
 from tr4.config import Settings
+
+# The AI Gateway's 50 req/min limit (see CLAUDE.md) is a non-issue for a single
+# live /chat query (one embed_texts call), but batch ingestion (tr4-sync) can
+# easily need hundreds of requests — guaranteed to hit it partway through
+# without retrying. Same idea as chat_groq.py's 429 handling, but looped since
+# a batch job needs to survive being rate-limited repeatedly, not just once.
+_MAX_RETRIES = 8
+_MAX_RETRY_WAIT_SECONDS = 30.0
+
+
+def _retry_wait_seconds(resp: httpx.Response) -> float:
+    for header in ("retry-after", "x-ratelimit-reset-requests"):
+        value = resp.headers.get(header)
+        if not value:
+            continue
+        try:
+            return min(float(value.rstrip("s")), _MAX_RETRY_WAIT_SECONDS)
+        except ValueError:
+            continue
+    return 5.0
 
 
 def _url(settings: Settings) -> str:
@@ -46,6 +69,11 @@ async def embed_texts(texts: list[str], settings: Settings) -> list[list[float]]
     async with httpx.AsyncClient(timeout=60.0) as client:
         for batch in _batches(texts, settings.embed_batch_size):
             resp = await client.post(_url(settings), headers=_headers(settings), json={"text": batch})
+            for _ in range(_MAX_RETRIES):
+                if resp.status_code != 429:
+                    break
+                await asyncio.sleep(_retry_wait_seconds(resp))
+                resp = await client.post(_url(settings), headers=_headers(settings), json={"text": batch})
             resp.raise_for_status()
             out.extend(_parse_batch(resp.json()))
     return out
@@ -58,6 +86,11 @@ def embed_texts_sync(texts: list[str], settings: Settings) -> list[list[float]]:
     with httpx.Client(timeout=60.0) as client:
         for batch in _batches(texts, settings.embed_batch_size):
             resp = client.post(_url(settings), headers=_headers(settings), json={"text": batch})
+            for _ in range(_MAX_RETRIES):
+                if resp.status_code != 429:
+                    break
+                time.sleep(_retry_wait_seconds(resp))
+                resp = client.post(_url(settings), headers=_headers(settings), json={"text": batch})
             resp.raise_for_status()
             out.extend(_parse_batch(resp.json()))
     return out

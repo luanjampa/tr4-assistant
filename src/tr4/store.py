@@ -113,6 +113,20 @@ async def count_rows_async(database_url: str) -> int:
         return row[0]
 
 
+async def kb_stats_async(database_url: str) -> dict:
+    """Freshness info for the frontend ("base atualizada em ..."). `created_at`
+    is only set on first insert of a given chunk id, not touched by the
+    upsert's UPDATE branch — so max(created_at) reflects when the newest
+    chunk was added, which is what "last updated" should mean here (a sync
+    that only re-embeds already-known chunks, with no new ids, won't move
+    it — acceptable, most real syncs add new source files).
+    """
+    pool = await get_pool(database_url)
+    async with pool.connection() as conn:
+        row = await (await conn.execute(f"SELECT count(*), max(created_at) FROM {TABLE}")).fetchone()
+        return {"chunks": row[0], "updated_at": row[1].isoformat() if row[1] else None}
+
+
 async def query_similar_async(
     database_url: str,
     embedding: list[float],

@@ -6,6 +6,7 @@ __pycache__/
 data/raw/
 data/chroma/
 data/manuals/
+data/manuals_tr4cwb/
 data/notes/
 data/facebook_manual/
 .pytest_cache/
