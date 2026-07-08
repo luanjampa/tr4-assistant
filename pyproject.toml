@@ -16,6 +16,16 @@ dependencies = [
   "trafilatura>=1.12.0",
 ]
 
+[project.optional-dependencies]
+# Only for local ingestion (tr4-sync --docs) of scanned PDFs pypdf can't
+# extract a text layer from — the deployed API never imports these, so kept
+# out of the base install. Needs system binaries too: `brew install
+# tesseract poppler` (or apt: tesseract-ocr poppler-utils).
+ocr = [
+  "pytesseract>=0.3.10",
+  "pdf2image>=1.17.0",
+]
+
 [project.scripts]
 tr4-sync = "tr4.jobs.sync:main"
 

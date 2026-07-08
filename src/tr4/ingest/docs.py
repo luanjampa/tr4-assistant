@@ -2,9 +2,38 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from pypdf import PdfReader
+
+logger = logging.getLogger(__name__)
+
+
+def _ocr_page(path: Path, page_num: int) -> str:
+    """Fallback for scanned pages pypdf can't extract a text layer from.
+
+    Renders just that one page to an image (pdf2image, needs the `poppler`
+    binary) and OCRs it (pytesseract, needs the `tesseract` binary, `por`
+    language pack) — both external system deps, not in requirements.txt,
+    since ingestion is a local/manual job (see CLAUDE.md), not something the
+    deployed Render API container ever runs. Degrades to "" (page skipped,
+    same as before) if either isn't installed or OCR itself fails, so a dev
+    machine without tesseract set up doesn't lose non-scanned pages too.
+    """
+    try:
+        import pytesseract
+        from pdf2image import convert_from_path
+    except ImportError:
+        return ""
+    try:
+        images = convert_from_path(str(path), first_page=page_num, last_page=page_num, dpi=300)
+        if not images:
+            return ""
+        return pytesseract.image_to_string(images[0], lang="por")
+    except Exception as e:
+        logger.warning("OCR falhou em %s p%d: %s", path.name, page_num, e)
+        return ""
 
 
 def _pdf_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
@@ -15,6 +44,10 @@ def _pdf_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
         # a page's content stream — Postgres text columns reject them outright
         # (psycopg.DataError), so strip before this ever reaches store.py.
         text = (page.extract_text() or "").replace("\x00", "").strip()
+        extraction = "text"
+        if not text:
+            text = _ocr_page(path, page_num).replace("\x00", "").strip()
+            extraction = "ocr"
         if not text:
             continue
         docs.append(
@@ -26,6 +59,7 @@ def _pdf_to_documents(path: Path, *, kind: str, id_prefix: str) -> list[dict]:
                     "kind": kind,
                     "file": path.name,
                     "page": str(page_num),
+                    "extraction": extraction,
                 },
             }
         )
