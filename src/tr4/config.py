@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     groq_price_in_per_m: float = 0.05
     groq_price_out_per_m: float = 0.08
     max_tokens_per_reply: int = 700
+    # Groq's default (1.0) is tuned for open-ended chat, not a support bot
+    # that's supposed to stick to retrieved CONTEXT — low but not 0 (fully
+    # deterministic tends to loop/repeat on this model). 0.2 keeps answers
+    # grounded while still able to phrase things naturally.
+    groq_temperature: float = 0.2
 
     tr4_data_dir: Path = Path("./data")
 

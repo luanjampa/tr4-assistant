@@ -45,6 +45,7 @@ async def chat_complete(
         "model": settings.groq_chat_model,
         "messages": messages,
         "max_tokens": max_tokens or settings.max_tokens_per_reply,
+        "temperature": settings.groq_temperature,
         "stream": False,
     }
     headers = {"Authorization": f"Bearer {settings.groq_api_key}"}

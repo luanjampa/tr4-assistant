@@ -1,6 +1,6 @@
 # TR4 Assistant
 
-Assistente com **RAG** sobre WhatsApp/Facebook, manuais (PDF) e pesquisa web, respostas via **Groq** (Llama). Embeddings via **Cloudflare Workers AI** (bge-m3) — sem servidor pra manter. Base vetorial em **Postgres + pgvector**. As mensagens dos utilizadores **não** são gravadas na base de conhecimento.
+Assistente com **RAG** sobre WhatsApp/Facebook, manuais (PDF) e pesquisa web, respostas via **Groq** (Llama). Embeddings via **Cloudflare Workers AI** (bge-m3) — sem servidor pra manter. Base vetorial em **Postgres + pgvector**. As mensagens dos utilizadores **não** são gravadas na base de conhecimento. No ar em [tr4-assistant.onrender.com](https://tr4-assistant.onrender.com) — a própria raiz do domínio já é o chat (`frontend/`, HTML+JS puro, sem build).
 
 ## Requisitos
 
@@ -32,8 +32,12 @@ tr4-sync --whatsapp ./data/raw/grupo.txt --facebook-json ./data/raw/fb.json
 # Posts do grupo Facebook colados à mão (ver seção abaixo)
 tr4-sync --facebook-manual ./data/facebook_manual
 
-# Manuais oficiais (PDF/txt/md)
+# Manuais oficiais (PDF/txt/md) — recursivo, pode organizar em subpastas
+# (ex.: data/manuals/motor/, data/manuals/freio/...), tudo entra kind=manual_doc
 tr4-sync --docs ./data/manuals
+# Página escaneada sem camada de texto? Fallback OCR automático (precisa
+# `pip install -e ".[ocr]"` + `brew install tesseract poppler`; sem isso,
+# a página é só pulada, igual antes — nunca quebra o sync).
 
 # Relatos do dono/preparador (experiência real, não é manual oficial)
 tr4-sync --owner-notes ./data/notes
@@ -75,11 +79,11 @@ make chat
 
 ### Frontend web
 
-A raiz do domínio (`GET /`) é o próprio chat — página HTML+JS estática em `frontend/`, servida pelo FastAPI via `StaticFiles` montado em `/` (mesma origem, sem CORS; rotas de API como `/health`/`/terms`/`/config`/`/chat` são registradas antes do mount e continuam funcionando normalmente). Mostra os termos antes do primeiro uso, aceite fica em `localStorage` mas quem garante o consent de verdade é o backend (`accepted_terms: true` em toda request). `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header e o widget — deixam de ser segredo real assim que vão pro browser, rate limit + budget cap + Turnstile são os controles de abuso de verdade a partir daí. A resposta de `/chat` não traz os trechos brutos recuperados da base (`context_previews` foi removido do contrato público) — WhatsApp indexado tem nome real de gente do grupo, não faz sentido expor isso a qualquer visitante da web. Local: `make api` e abrir `http://127.0.0.1:8000/`. Em produção: `https://tr4-assistant.onrender.com/`.
+A raiz do domínio (`GET /`) é o próprio chat — página HTML+JS estática em `frontend/`, servida pelo FastAPI via `StaticFiles` montado em `/` (mesma origem, sem CORS; rotas de API como `/health`/`/terms`/`/config`/`/chat` são registradas antes do mount e continuam funcionando normalmente). Mostra os termos antes do primeiro uso, aceite fica em `localStorage` mas quem garante o consent de verdade é o backend (`accepted_terms: true` em toda request). `GET /config` devolve `TR4_API_KEY`/`TURNSTILE_SITE_KEY` pro JS montar o header e o widget (deixam de ser segredo real assim que vão pro browser, rate limit + budget cap + Turnstile são os controles de abuso de verdade a partir daí), mais `version`/`kb_chunks`/`kb_updated_at` pra mostrar no topo da página tipo "Base atualizada em 08/07/2026 · 10.520 trechos indexados · v0.1.0" — dá pra ver na hora se uma sincronização nova realmente chegou até o site, sem precisar abrir terminal. A resposta de `/chat` não traz os trechos brutos recuperados da base (`context_previews` foi removido do contrato público) — WhatsApp indexado tem nome real de gente do grupo, não faz sentido expor isso a qualquer visitante da web; o próprio texto da resposta também passa por uma redação de nomes (`rag.py:_redact_names`) como camada extra, já que o modelo sozinho não segura essa regra 100% das vezes. Local: `make api` e abrir `http://127.0.0.1:8000/`. Em produção: `https://tr4-assistant.onrender.com/`.
 
 ## Configuração
 
-Variáveis em `.env` (ver `.env.example`): Cloudflare (embeddings), Groq (chat), Postgres, API key, rate limit, teto de gasto mensal.
+Variáveis em `.env` (ver `.env.example`): Cloudflare (embeddings), Groq (chat, incluindo `GROQ_TEMPERATURE=0.2` — baixo de propósito pra grudar mais no CONTEXT recuperado e reduzir alucinação, não 0 pra não ficar repetitivo), Postgres, API key, rate limit, teto de gasto mensal, Turnstile.
 
 ## Guardrails
 
@@ -106,7 +110,7 @@ make injection-test   # precisa de GROQ_API_KEY real — testa bypass de verdade
 **No ar**: Render (API) + Neon (Postgres+pgvector) + Cloudflare (embeddings/captcha) em vez de Railway, pra não misturar billing/limite com outros projetos na mesma conta. Custo real: **$0/mês**, dentro do free tier de cada um.
 
 - **Render** ([render.com](https://render.com), signup: [dashboard.render.com/register](https://dashboard.render.com/register)) — free tier: 750h/mês, 512MB RAM, dorme após 15min sem uso (~30-50s pra acordar na próxima pergunta). Sem cartão.
-- **Neon** ([neon.com](https://neon.com), signup: [console.neon.tech/signup](https://console.neon.tech/signup)) — free tier: 100 compute-hours/mês, 0.5GB de storage (nosso banco tem ~23MB, sobra bastante), sem expiração por calendário, "acorda" em <500ms. Sem cartão.
+- **Neon** ([neon.com](https://neon.com), signup: [console.neon.tech/signup](https://console.neon.tech/signup)) — free tier: 100 compute-hours/mês, 0.5GB de storage. Produção hoje tem ~23MB (pré-expansão da base); local já passou pra ~161MB depois de indexar todos os manuais por sistema/ano + PDFs do TR4 CWB — ainda folgado dentro dos 500MB, mas migrar essa base maior pra produção é o próximo passo (item pendente, ver "Próximos passos"). Sem expiração por calendário, "acorda" em <500ms. Sem cartão.
 - **Cloudflare** — Workers AI + AI Gateway com Spend Limit real configurado (ver seção Guardrails).
 
 Passo a passo completo, incluindo um gotcha real de produção (search_path do pooler do Neon) já corrigido no código: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
@@ -148,6 +152,8 @@ mês, depois mensal):
 ## Próximos passos sugeridos
 
 - Implementar `fetch_group_feed_stub` em `facebook_batch.py` com Graph API após app Meta aprovado
-- Agendar `tr4-sync` com cron ou Railway Cron Job
+- Agendar `tr4-sync` com cron ou Render Cron Job (hoje é manual)
 - Métricas e logs de ingestão
 - Revisar periodicamente `data/seeds/tr4_sources.txt` (adicionar/remover fontes)
+- Migrar os dados já indexados localmente (manuais completos por sistema/ano + PDFs do
+  site do clube TR4 CWB) pro Postgres de produção (Neon) — ver `docs/DEPLOY.md`
