@@ -50,11 +50,19 @@
   }
 
   async function loadConfig() {
-    try {
-      const res = await fetch("/config");
-      config = await res.json();
-    } catch (e) {
-      config = { api_key: "", turnstile_site_key: "" };
+    // One retry: an intermittent pooled-DB hiccup on the backend (rare, but
+    // real — see store.py) shouldn't permanently strand a page load with no
+    // api_key, which breaks every /chat call for the rest of that session.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch("/config");
+        if (!res.ok) throw new Error(`config ${res.status}`);
+        config = await res.json();
+        break;
+      } catch (e) {
+        config = { api_key: "", turnstile_site_key: "" };
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 1500));
+      }
     }
     renderKbStatus();
   }

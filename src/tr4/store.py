@@ -91,7 +91,20 @@ async def get_pool(database_url: str) -> AsyncConnectionPool:
         # connection, which fails if `CREATE EXTENSION vector` hasn't run yet.
         async with await psycopg.AsyncConnection.connect(database_url, autocommit=True) as boot_conn:
             await boot_conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-        pool = AsyncConnectionPool(database_url, open=False, configure=_configure_connection)
+        # check=check_connection: pings a connection with a trivial query
+        # before handing it out — Neon's pooled endpoint sometimes closes the
+        # underlying SSL connection out from under an idle pooled connection
+        # (seen for real as intermittent `psycopg.OperationalError: consuming
+        # input failed: SSL connection has been closed unexpectedly` on
+        # /config), and without this a caller gets handed that dead
+        # connection and the request just fails; with it, the pool discards
+        # the dead one and hands out (or opens) a working one instead.
+        pool = AsyncConnectionPool(
+            database_url,
+            open=False,
+            configure=_configure_connection,
+            check=AsyncConnectionPool.check_connection,
+        )
         # wait=True: fail fast with a clear PoolTimeout if the DB isn't reachable,
         # instead of returning before any connection is ready (first query would
         # then hang waiting on a connection that may never come).
