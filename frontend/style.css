@@ -51,6 +51,27 @@ body {
   opacity: 0.75;
 }
 
+.footer {
+  padding: 10px 16px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.footer p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.footer a {
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.footer a:hover {
+  color: var(--text);
+}
+
 #app {
   flex: 1;
   display: flex;
